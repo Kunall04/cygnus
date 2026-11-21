@@ -5,11 +5,21 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 floci_url=http://127.0.0.1:4566
 region=us-east-1
 bucket=cygnus-local
-floci_container=cygnus-floci-check
-redis_container=cygnus-redis-check
+floci_image=floci/floci:2.5.0
+redis_image=redis:7-alpine
 
 command -v aws >/dev/null || { echo 'Install the AWS CLI before running this script.' >&2; exit 1; }
 docker info >/dev/null 2>&1 || { echo 'Start Docker before running this script.' >&2; exit 1; }
+
+container_name() {
+    local default_name="$1" image="$2" port="$3" running
+    running="$(docker ps --filter "ancestor=$image" --format '{{.Names}} {{.Ports}}' |
+        awk -v port="$port" '!found && index($0, "127.0.0.1:" port "->") { print $1; found=1 }')"
+    printf '%s\n' "${running:-$default_name}"
+}
+
+floci_container="$(container_name cygnus-floci "$floci_image" 4566)"
+redis_container="$(container_name cygnus-redis "$redis_image" 6387)"
 
 ensure_container() {
     local name="$1"
@@ -30,8 +40,8 @@ aws_local() {
 }
 
 ensure_container "$floci_container" -p 127.0.0.1:4566:4566 \
-    -e "FLOCI_BASE_URL=$floci_url" floci/floci:2.5.0
-ensure_container "$redis_container" -p 127.0.0.1:6387:6379 redis:7-alpine
+    -e "FLOCI_BASE_URL=$floci_url" "$floci_image"
+ensure_container "$redis_container" -p 127.0.0.1:6387:6379 "$redis_image"
 
 for attempt in {1..30}; do
     if aws_local sqs list-queues --cli-connect-timeout 1 --cli-read-timeout 1 >/dev/null 2>&1 &&

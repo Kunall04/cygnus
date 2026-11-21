@@ -121,7 +121,7 @@ export default function LandingFeatures() {
         </svg>
       ),
       title: "SQS Build Queue",
-      desc: "Deployments are enqueued asynchronously via Redis, decoupling the deploy service from the build worker.",
+      desc: "SQS delivers build jobs. Redis tracks progress and coordinates workers that receive the same deployment ID.",
       delay: 0.18,
     },
     {

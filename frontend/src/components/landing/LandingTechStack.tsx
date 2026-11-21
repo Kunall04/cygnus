@@ -7,9 +7,9 @@ export function Ticker() {
     "GitHub Deployments",
     "Amazon SQS",
     "Amazon S3",
-    "AWS EC2",
+    "Redis",
     "Wildcard Subdomains",
-    "PM2 Process",
+    "CloudWatch Logs",
     "ECS Fargate",
     "Build Automation",
     "Async Workers",
@@ -76,7 +76,7 @@ export default function LandingTechStack() {
               fontFamily: "var(--font-body)",
             }}
           >
-            Powered by Modern Infrastructure.
+            What runs a deploy
           </h2>
         </div>
       </FadeUp>
@@ -91,11 +91,11 @@ export default function LandingTechStack() {
           { name: "React", role: "Frontend UI" },
           { name: "TypeScript", role: "Type safety" },
           { name: "Node.js", role: "Backend services" },
-          { name: "Redis", role: "Job queue" },
-          { name: "AWS EC2", role: "Compute" },
+          { name: "Redis", role: "Deployment status and leases" },
+          { name: "Amazon SQS", role: "Build queue" },
           { name: "ECS Fargate", role: "Cloud builds" },
           { name: "Amazon S3", role: "Object storage" },
-          { name: "PM2", role: "Process manager" },
+          { name: "CloudWatch Logs", role: "Runner output" },
         ].map((tech, i) => (
           <FadeUp key={tech.name} delay={i * 0.05}>
             <div

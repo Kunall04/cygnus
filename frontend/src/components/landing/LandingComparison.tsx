@@ -162,7 +162,7 @@ export function ComparisonTable() {
             }}
           >
             <div style={{ padding: "12px 16px", fontSize: 13, fontWeight: 500, color: "var(--text-secondary)" }}>{row.feature}</div>
-            <div style={{ padding: "12px 12px", textAlign: "center", background: "rgba(192,132,252,0.03)" }}>
+            <div style={{ padding: "12px 12px", textAlign: "center", background: "rgb(var(--accent-rgb) / 0.03)" }}>
               <CellIcon value={row.cygnus} />
             </div>
             <div style={{ padding: "12px 12px", textAlign: "center" }}>

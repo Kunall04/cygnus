@@ -68,7 +68,7 @@ export default function CygnusLanding() {
           <div style={{ position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none" }}>
 
             <ColorBends
-              colors={["#A855F7", "#8a5cff"]}
+              colors={["#249c60", "#154f3c"]}
               rotation={90}
               speed={0.2}
               scale={1}
@@ -94,9 +94,9 @@ export default function CygnusLanding() {
               cursorRadius={500}
               cursorForce={0.1}
               bulgeOnly
-              gradientFrom="#A855F7"
-              gradientTo="#B497CF"
-              glowColor="#120F17"
+              gradientFrom="#45b77a"
+              gradientTo="#97ddba"
+              glowColor="#091610"
             />
 
 
@@ -204,11 +204,11 @@ export default function CygnusLanding() {
                   lineHeight: 1.7,
                 }}
               >
-                Join students, indie hackers, and startup builders who ship faster with Cygnus.
+                Give Cygnus a Git repository and follow it through the build queue.
               </p>
               <motion.a
                 href="/deploy"
-                whileHover={{ scale: 1.04, boxShadow: "0 0 48px rgba(192,132,252,0.3)" }}
+                whileHover={{ scale: 1.04, boxShadow: "0 0 48px rgb(var(--accent-rgb) / 0.3)" }}
                 whileTap={{ scale: 0.97 }}
                 style={{
                   display: "inline-flex",

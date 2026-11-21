@@ -180,7 +180,7 @@ test('the running worker reconciles a crash on the final receive and preserves d
         ACCESS: 'test',
         SECRET: 'test',
         ENDPOINT: endpoint,
-        BUCKET: 'cygnus',
+        BUCKET: 'cygnus-test',
       },
     });
     for (const stream of [worker.stdout, worker.stderr]) {

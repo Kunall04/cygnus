@@ -9,8 +9,8 @@ export function Terminal() {
     { text: "Deploy github.com/user/app", color: "var(--text-muted)" },
     { text: "  ✦ Cloning repository...", color: "var(--primary)" },
     { text: "  ✦ Uploading to S3...", color: "var(--primary)" },
-    { text: "  ✦ Queuing build job [id: a7f3c9]", color: "#a78bfa" },
-    { text: "  ✦ Worker picked up job", color: "#a78bfa" },
+    { text: "  ✦ Queuing build job [id: a7f3c]", color: "#9decb9" },
+    { text: "  ✦ Worker picked up job", color: "#9decb9" },
     { text: "  ✦ Running npm install... done", color: "#22d3ee" },
     { text: "  ✦ Running npm run build... done", color: "#22d3ee" },
     { text: "  ✓ Deployed to a7f3c.localhost:3001", color: "var(--green)" },
@@ -89,7 +89,7 @@ export function Terminal() {
                 inset: 0,
                 pointerEvents: "none",
                 backgroundImage:
-                  "linear-gradient(to right, rgba(192,132,252,0.02) 1px, transparent 1px), linear-gradient(to bottom, rgba(192,132,252,0.02) 1px, transparent 1px)",
+                  "linear-gradient(to right, rgb(var(--accent-rgb) / 0.02) 1px, transparent 1px), linear-gradient(to bottom, rgb(var(--accent-rgb) / 0.02) 1px, transparent 1px)",
                 backgroundSize: "42px 42px",
               }}
             />
@@ -149,46 +149,6 @@ export default function LandingHero() {
             maxWidth: "100%",
           }}
         >
-          {/* Badge */}
-          <motion.a
-            href="https://github.com/Kunall04/cygnus"
-            target="_blank"
-            rel="noopener noreferrer"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              borderRadius: 100,
-              border: "1px solid var(--border)",
-              background: "rgba(255,255,255,0.02)",
-              padding: "5px 14px",
-              fontFamily: "var(--font-mono)",
-              fontSize: 10,
-              letterSpacing: "0.15em",
-
-              textDecoration: "none",
-              color: "var(--text-secondary)",
-              backdropFilter: "blur(4px)",
-              transition: "border-color 0.2s",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--border-hover)")}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
-          >
-            <div
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: "50%",
-                background: "var(--green)",
-                animation: "pulse-dot 2s ease infinite",
-              }}
-            />
-            <span style={{ color: "#ffffff67" }}>Live on your own infrastructure</span>
-          </motion.a>
-
           {/* Heading */}
           <div style={{ maxWidth: "5xl" }}>
             <motion.h1
@@ -204,7 +164,7 @@ export default function LandingHero() {
                 textWrap: "balance",
               }}
             >
-              Deploy Frontend Apps
+              From Git to
               <br />
               <span style={{ position: "relative", display: "inline-block", whiteSpace: "nowrap" }}>
                 <span
@@ -214,9 +174,9 @@ export default function LandingHero() {
                     WebkitTextFillColor: "transparent",
                   }}
                 >
-                  in{" "}
+                  a{" "}
                 </span>
-                <span style={{ color: "var(--primary)" }}>Seconds</span>
+                <span style={{ color: "var(--primary)" }}>live preview</span>
                 {/* Underline SVG */}
                 <svg
                   aria-hidden="true"
@@ -261,8 +221,7 @@ export default function LandingHero() {
                 color: "var(--text-muted)",
               }}
             >
-              Paste your GitHub repo. Cygnus clones, builds, and ships your frontend to a live URL — fully automated,
-              no config, no compromise.
+              Paste a GitHub repo, follow the build, and open a preview when your site is ready.
             </motion.p>
           </div>
 
@@ -290,7 +249,7 @@ export default function LandingHero() {
                 gap: 8,
                 border: "none",
                 borderRadius: 6,
-                boxShadow: "0 32px 64px -16px #0006, 0 16px 32px -8px #0006, 0 8px 16px -4px #0004, 0 4px 8px -2px #0004, 0 -8px 16px -1px #0003, 0 2px 4px -1px #0004, inset 0 0 0 1px #e58efa14, inset 0 1px rgba(200, 153, 248, 0.94)",
+                boxShadow: "0 32px 64px -16px #0006, 0 16px 32px -8px #0006, 0 8px 16px -4px #0004, 0 4px 8px -2px #0004, 0 -8px 16px -1px #0003, 0 2px 4px -1px #0004, inset 0 0 0 1px #75e8a614, inset 0 1px rgb(var(--accent-rgb) / 0.75)",
                 background: "var(--primary)",
                 padding: "12px 24px",
                 fontSize: 14,
@@ -301,11 +260,11 @@ export default function LandingHero() {
                 transition: "all 0.2s ease",
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = "#ac6ef4";
+                e.currentTarget.style.background = "#59cb8c";
                 e.currentTarget.style.transform = "translateY(-2px)";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = "#b781f5ff";
+                e.currentTarget.style.background = "#75e8a6";
                 e.currentTarget.style.transform = "none";
               }}
             >
@@ -315,8 +274,7 @@ export default function LandingHero() {
               </svg>
             </Link>
             <motion.a
-              href="https://github.com/Kunall04/cygnus"
-              target="_blank"
+              href="#architecture"
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               className="hero-cta-btn"
@@ -339,10 +297,7 @@ export default function LandingHero() {
                 transition: "all 0.2s",
               }}
             >
-              <svg viewBox="0 0 16 16" fill="none" style={{ width: 14, height: 14, color: "#facc15" }}>
-                <path d="M8 1.5 9.8 5.2l4 .6-2.9 2.8.7 4-3.6-1.9-3.6 1.9.7-4-2.9-2.8 4-.6L8 1.5Z" fill="currentColor" />
-              </svg>
-              Star on GitHub
+              Explore the pipeline
             </motion.a>
           </motion.div>
 

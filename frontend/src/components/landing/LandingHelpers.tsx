@@ -91,7 +91,7 @@ export const SectionLabel = ({ text }: { text: string }) => (
       fontFamily: "var(--font-mono)",
       fontSize: 10,
       letterSpacing: "0.2em",
-      color: "rgba(192,132,252,0.7)",
+      color: "rgb(var(--accent-rgb) / 0.7)",
       textTransform: "uppercase",
       display: "block",
       marginBottom: 12,

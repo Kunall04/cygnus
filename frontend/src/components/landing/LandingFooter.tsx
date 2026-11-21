@@ -3,6 +3,7 @@ import React from "react";
 export default function LandingFooter() {
   return (
     <footer
+      id="footer"
       style={{
         borderTop: "1px solid var(--border)",
         padding: "40px clamp(16px, 4vw, 48px)",
@@ -16,7 +17,7 @@ export default function LandingFooter() {
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-<img className="cygnus-logo" src="/cygnus.png" width={26} height={26} alt="" />
+        <img className="cygnus-logo" src="/cygnus.png" width={26} height={26} alt="" />
         <span style={{ fontFamily: "var(--font-mono)", fontWeight: 500, fontSize: 14 }}>Cygnus</span>
       </div>
       <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>

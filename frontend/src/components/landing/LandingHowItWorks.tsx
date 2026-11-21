@@ -4,44 +4,25 @@ import { FadeUp, SectionLabel } from "./LandingHelpers";
 // ─── Step Highlights Mapping ────────────────────────────────────────────────
 const stepHighlights: Record<string, { nodes: string[]; edges: string[] }> = {
   "01": {
-    nodes: ["developer", "frontend", "uploader"],
-    edges: ["dev-to-fe", "fe-to-uploader-post"]
+    nodes: ["frontend", "uploader"],
+    edges: ["submit"],
   },
   "02": {
-    nodes: ["uploader", "local-disk", "r2"],
-    edges: ["uploader-to-disk", "uploader-to-r2"]
+    nodes: ["uploader", "s3"],
+    edges: ["save-source"],
   },
   "03": {
-    nodes: ["uploader", "redis"],
-    edges: ["uploader-to-redis"]
+    nodes: ["uploader", "sqs", "worker", "redis"],
+    edges: ["enqueue", "receive", "read-status", "update-status"],
   },
   "04": {
-    nodes: ["worker", "shell", "r2", "redis", "router", "end-user"],
-    edges: ["worker-to-redis", "worker-to-r2", "worker-to-shell", "user-to-router", "router-to-r2", "uploader-to-fe-get"]
-  }
-};
-
-const nodeToStep: Record<string, string> = {
-  "developer": "01",
-  "frontend": "01",
-  "uploader": "02",
-  "local-disk": "02",
-  "redis": "03",
-  "r2": "02",
-  "worker": "04",
-  "shell": "04",
-  "router": "04",
-  "end-user": "04"
+    nodes: ["worker", "fargate", "s3", "preview"],
+    edges: ["launch-task", "build-files", "read-preview"],
+  },
 };
 
 // ─── SVG Feather Icons ──────────────────────────────────────────────────────
 const Icons = {
-  Developer: (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="12" cy="7" r="4" />
-    </svg>
-  ),
   Frontend: (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
       <rect x="2" y="3" width="20" height="14" rx="2" />
@@ -56,9 +37,10 @@ const Icons = {
       <line x1="12" y1="3" x2="12" y2="15" strokeLinecap="round" />
     </svg>
   ),
-  LocalDisk: (
+  Queue: (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="3" y="4" width="18" height="16" rx="3" />
+      <path d="M7 9h10M7 15h7" strokeLinecap="round" />
     </svg>
   ),
   Redis: (
@@ -68,7 +50,7 @@ const Icons = {
       <path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3" />
     </svg>
   ),
-  R2: (
+  S3: (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
       <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -80,7 +62,7 @@ const Icons = {
       <path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 15h3M1 9h3M1 15h3" strokeLinecap="round" />
     </svg>
   ),
-  Shell: (
+  Fargate: (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
       <rect x="3" y="3" width="18" height="18" rx="2" />
       <polyline points="7 8 11 12 7 16" strokeLinecap="round" strokeLinejoin="round" />
@@ -93,12 +75,6 @@ const Icons = {
       <rect x="2" y="16" width="6" height="6" rx="1" />
       <rect x="9" y="2" width="6" height="6" rx="1" />
       <path d="M12 8v4M12 12H5v4M12 12h7v4" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  ),
-  EndUser: (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <circle cx="12" cy="12" r="10" />
-      <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
     </svg>
   ),
 };
@@ -134,7 +110,7 @@ export function PipelineSteps({
                 padding: 6,
                 minHeight: 192,
                 transform: isActive ? "translateY(-4px)" : "none",
-                boxShadow: isActive ? "0 8px 30px rgba(192, 132, 252, 0.08)" : "none",
+                boxShadow: isActive ? "0 8px 30px rgb(var(--accent-rgb) / 0.08)" : "none",
                 transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
                 cursor: "pointer",
               }}
@@ -212,56 +188,6 @@ export function ArchitectureDiagram({
   const isNodeActive = (nodeId: string) => activeNodes.includes(nodeId);
   const isEdgeActive = (edgeId: string) => activeEdges.includes(edgeId);
 
-  // Subgraph frame active checking
-  const isWorkerFrameActive = isNodeActive("worker") || isNodeActive("shell");
-  const isRouterFrameActive = isNodeActive("router") || isNodeActive("end-user");
-
-  const SubgraphFrame = ({
-    x,
-    y,
-    width,
-    height,
-    title,
-    isActive,
-  }: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    title: string;
-    isActive: boolean;
-  }) => (
-    <g>
-      <rect
-        x={x}
-        y={y}
-        width={width}
-        height={height}
-        rx={12}
-        fill="rgba(255, 255, 255, 0.005)"
-        stroke={isActive ? "var(--primary-dim)" : "rgba(255, 255, 255, 0.03)"}
-        strokeWidth={isActive ? 1.5 : 1}
-        strokeDasharray={isActive ? "none" : "4, 4"}
-        style={{ transition: "all 0.3s ease" }}
-      />
-      <text
-        x={x + 12}
-        y={y - 8}
-        fill={isActive ? "var(--primary)" : "var(--text-muted)"}
-        style={{
-          fontFamily: "var(--font-mono)",
-          fontSize: 8,
-          fontWeight: 600,
-          letterSpacing: "0.1em",
-          userSelect: "none",
-          transition: "all 0.3s ease",
-        }}
-      >
-        {title}
-      </text>
-    </g>
-  );
-
   const Node = ({
     id,
     x,
@@ -295,9 +221,9 @@ export function ArchitectureDiagram({
           y={y}
           width={width}
           height={height}
-          rx={8}
-          fill={isActive ? "var(--primary-glow)" : "rgba(9, 9, 11, 0.9)"}
-          stroke={isActive ? "var(--primary)" : "var(--border-card)"}
+          rx={12}
+          fill={isActive ? "var(--primary-glow)" : "#102018"}
+          stroke={isActive ? "var(--primary)" : "#315043"}
           strokeWidth={isActive ? 1.5 : 1}
           style={{
             transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
@@ -322,7 +248,7 @@ export function ArchitectureDiagram({
           fill="var(--text-primary)"
           style={{
             fontFamily: "var(--font-body)",
-            fontSize: 11,
+            fontSize: 13,
             fontWeight: 600,
             userSelect: "none",
           }}
@@ -335,7 +261,7 @@ export function ArchitectureDiagram({
           fill="var(--text-muted)"
           style={{
             fontFamily: "var(--font-mono)",
-            fontSize: 8.5,
+            fontSize: 10,
             userSelect: "none",
           }}
         >
@@ -366,7 +292,7 @@ export function ArchitectureDiagram({
         <path
           d={path}
           fill="none"
-          stroke={isActive ? "rgba(192, 132, 252, 0.3)" : "rgba(255, 255, 255, 0.04)"}
+          stroke={isActive ? "rgb(var(--accent-rgb) / 0.65)" : "#527264"}
           strokeWidth={isActive ? 2 : 1}
           style={{
             transition: "all 0.3s ease",
@@ -391,8 +317,8 @@ export function ArchitectureDiagram({
               width={label.length * 4.5 + 16}
               height={16}
               rx={4}
-              fill="#09090b"
-              stroke={isActive ? "rgba(192, 132, 252, 0.2)" : "rgba(255, 255, 255, 0.02)"}
+              fill="#0e1913"
+              stroke={isActive ? "rgb(var(--accent-rgb) / 0.35)" : "#2b4438"}
               strokeWidth={1}
               style={{ transition: "all 0.3s ease" }}
             />
@@ -403,7 +329,7 @@ export function ArchitectureDiagram({
               fill={isActive ? "var(--primary)" : "var(--text-muted)"}
               style={{
                 fontFamily: "var(--font-mono)",
-                fontSize: 8,
+                fontSize: 9,
                 letterSpacing: "0.02em",
                 fontWeight: isActive ? 600 : 400,
                 userSelect: "none",
@@ -419,12 +345,14 @@ export function ArchitectureDiagram({
   };
 
   return (
-    <div style={{ width: "100%", overflowX: "auto", padding: "16px 0" }}>
+    <div className="architecture-panel">
       <svg
-        viewBox="0 0 1160 620"
+        role="img"
+        aria-label="Cygnus deploy flow from the dashboard through SQS and Fargate to S3. Redis tracks deployment state."
+        viewBox="0 0 1024 375"
         style={{
           width: "100%",
-          minWidth: 1080,
+          minWidth: 900,
           height: "auto",
           display: "block",
           background: "transparent",
@@ -440,7 +368,7 @@ export function ArchitectureDiagram({
             markerHeight="5"
             orient="auto-start-reverse"
           >
-            <path d="M 0 2 L 6 5 L 0 8 z" fill="rgba(255, 255, 255, 0.15)" />
+            <path d="M 0 2 L 6 5 L 0 8 z" fill="#76a08b" />
           </marker>
           <marker
             id="arrow-active"
@@ -476,42 +404,27 @@ export function ArchitectureDiagram({
           }
         `}</style>
 
-        {/* ─── Subgraph Boxes ─── */}
-        <SubgraphFrame x={560} y={310} width={210} height={270} title="Deploy Worker Pool" isActive={isWorkerFrameActive} />
-        <SubgraphFrame x={270} y={310} width={210} height={270} title="Request Handler" isActive={isRouterFrameActive} />
+        <FlowLine id="submit" path="M 204 93 H 278" label="POST /deploy" labelX={241} labelY={75} />
+        <FlowLine id="enqueue" path="M 470 93 H 542" label="Enqueue ID" labelX={506} labelY={75} />
+        <FlowLine id="receive" path="M 726 93 H 802" label="Receive job" labelX={764} labelY={75} />
 
-        {/* ─── Flow Lines ─── */}
-        <FlowLine id="dev-to-fe" path="M 190 100 H 290" label="Paste Git URL" labelX={240} labelY={85} />
-        <FlowLine id="fe-to-uploader-post" path="M 460 90 H 580" label="POST /deploy" labelX={520} labelY={72} />
-        <FlowLine id="uploader-to-fe-get" path="M 580 110 H 460" label="GET logs/status" labelX={520} labelY={128} reverse={true} />
-        <FlowLine id="uploader-to-disk" path="M 665 130 V 200" label="Git Clone" labelX={715} labelY={165} />
-        <FlowLine id="uploader-to-redis" path="M 750 100 H 870 V 205 H 930" label="Push Job ID" labelX={810} labelY={85} />
-        <FlowLine id="uploader-to-r2" path="M 750 100 H 885 V 365 H 930" label="Upload Source" labelX={835} labelY={280} />
-        
-        <FlowLine id="worker-to-redis" path="M 755 365 H 860 V 220 H 930" label="Receive SQS job" labelX={820} labelY={350} reverse={true} />
-        <FlowLine id="worker-to-r2" path="M 755 385 H 930" label="Download Source / Upload dist" labelX={842} labelY={373} />
-        <FlowLine id="worker-to-shell" path="M 625 410 V 505" label="Spawn Build" labelX={580} labelY={457} />
-        <FlowLine id="shell-to-worker" path="M 705 505 V 410" label="Live logs" labelX={750} labelY={457} reverse={true} />
+        <FlowLine id="save-source" path="M 374 126 V 244" label="Save source" labelX={332} labelY={179} />
+        <FlowLine id="read-status" path="M 452 126 V 206 H 570 V 244" label="Read progress" labelX={512} labelY={194} />
+        <FlowLine id="update-status" path="M 842 126 V 173 H 654 V 244" label="Status + lease" labelX={745} labelY={161} />
+        <FlowLine id="launch-task" path="M 904 126 V 244" label="Launch task" labelX={949} labelY={179} />
 
-        <FlowLine id="user-to-router" path="M 375 505 V 410" label="Visit Sandbox" labelX={330} labelY={457} />
-        <FlowLine id="router-to-r2" path="M 465 377 H 510 V 457 H 885 V 365 H 930" label="Fetch compiled files" labelX={800} labelY={442} />
+        <FlowLine id="read-preview" path="M 204 277 H 278" label="Read site" labelX={241} labelY={258} />
+        <FlowLine id="build-files" path="M 895 310 V 349 H 374 V 310" label="Read / write files" labelX={632} labelY={334} />
 
-        {/* ─── Nodes ─── */}
-        <Node id="developer" x={40} y={70} width={150} height={60} title="Developer" subtext="Repo Owner / Operator" icon={Icons.Developer} stepId="01" />
-        <Node id="frontend" x={290} y={70} width={170} height={60} title="React Frontend" subtext="Console Dashboard" icon={Icons.Frontend} stepId="01" />
-        <Node id="uploader" x={580} y={70} width={170} height={60} title="Upload Service" subtext="Express API Uploader" icon={Icons.Uploader} stepId="02" />
-        <Node id="local-disk" x={580} y={200} width={170} height={50} title="Local Disk" subtext="Cloning Workspace" icon={Icons.LocalDisk} stepId="02" />
+        <Node id="frontend" x={32} y={60} width={172} height={66} title="Dashboard" subtext="Submit a Git URL" icon={Icons.Frontend} stepId="01" />
+        <Node id="uploader" x={278} y={60} width={192} height={66} title="Upload API" subtext="Clone and stage source" icon={Icons.Uploader} stepId="02" />
+        <Node id="sqs" x={542} y={60} width={184} height={66} title="Amazon SQS" subtext="Deployment queue" icon={Icons.Queue} stepId="03" />
+        <Node id="worker" x={802} y={60} width={190} height={66} title="Deploy Worker" subtext="Launch and track tasks" icon={Icons.Worker} stepId="04" />
 
-        <Node id="redis" x={930} y={170} width={180} height={70} title="SQS + Redis" subtext="Build jobs and deployment state" icon={Icons.Redis} stepId="03" />
-        <Node id="r2" x={930} y={330} width={180} height={70} title="Amazon S3" subtext="S3 Object Storage" icon={Icons.R2} stepId="02" />
-
-        {/* Worker Pool Inner Nodes */}
-        <Node id="worker" x={575} y={345} width={180} height={65} title="Deploy Worker" subtext="Queue Consumer" icon={Icons.Worker} stepId="04" />
-        <Node id="shell" x={575} y={505} width={195} height={60} title="Subprocess Shell" subtext="npm install && npm run build" icon={Icons.Shell} stepId="04" />
-
-        {/* Request Router Inner Nodes */}
-        <Node id="router" x={285} y={345} width={180} height={65} title="Request Router" subtext="Wildcard Subdomain Proxy" icon={Icons.Router} stepId="04" />
-        <Node id="end-user" x={285} y={505} width={180} height={60} title="End User" subtext="Visit Sandbox Link" icon={Icons.EndUser} stepId="04" />
+        <Node id="preview" x={32} y={244} width={172} height={66} title="Preview Server" subtext="Route by deploy ID" icon={Icons.Router} stepId="04" />
+        <Node id="s3" x={278} y={244} width={192} height={66} title="Amazon S3" subtext="Source and built files" icon={Icons.S3} stepId="02" />
+        <Node id="redis" x={542} y={244} width={184} height={66} title="Redis" subtext="Status, logs, leases" icon={Icons.Redis} stepId="03" />
+        <Node id="fargate" x={802} y={244} width={190} height={66} title="ECS Fargate" subtext="One task per build" icon={Icons.Fargate} stepId="04" />
       </svg>
     </div>
   );
@@ -534,15 +447,15 @@ export function MobileFlowDiagram() {
     },
     {
       step: "03",
-      title: "Redis Build Queue",
+      title: "Queue and track",
       desc: "Sends the deployment ID to SQS and records progress in Redis.",
-      nodes: ["SQS + Redis"],
+      nodes: ["Amazon SQS", "Redis"],
     },
     {
       step: "04",
-      title: "Deploy Worker Pool & Router",
+      title: "Build and preview",
       desc: "The worker receives the job from SQS and can launch Fargate. The runner writes the built site to S3.",
-      nodes: ["Deploy Worker", "Subprocess Shell", "Request Router"],
+      nodes: ["Deploy Worker", "ECS Fargate", "Preview Server"],
     },
   ];
 
@@ -600,7 +513,7 @@ export function MobileFlowDiagram() {
               <p style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5, marginBottom: 12 }}>
                 {item.desc}
               </p>
-              
+
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {item.nodes.map((node) => (
                   <span
@@ -679,7 +592,7 @@ export default function LandingHowItWorks() {
                 letterSpacing: "-0.02em",
               }}
             >
-              System Architecture Flow
+              How a deploy flows
             </h3>
           </div>
         </FadeUp>

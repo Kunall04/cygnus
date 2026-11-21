@@ -104,7 +104,7 @@ export function Landing() {
 
   return (
     <div className="landingmain-container" style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text-primary)", display: "flex", flexDirection: "column"           ,backgroundImage:
-            "radial-gradient(circle at 1px 1px, rgba(206, 159, 253, 0.49) 0.62px, transparent 0)",
+            "radial-gradient(circle at 1px 1px, rgb(var(--accent-rgb) / 0.22) 0.62px, transparent 0)",
           backgroundSize: "25px 25px",
           backgroundRepeat: "repeat",}}>
       <LandingNav />
@@ -303,7 +303,7 @@ export function Landing() {
                         })}
 
                         {uploadId && !deployed && status !== "failed" && logs.length === 0 && (
-                          <p style={{ fontFamily: "var(--font-mono)", fontSize: "clamp(10px, 2.5vw, 12px)", color: "#a78bfa" }}>
+                          <p style={{ fontFamily: "var(--font-mono)", fontSize: "clamp(10px, 2.5vw, 12px)", color: "#9decb9" }}>
                             ✦ Queued in SQS. Waiting for a build worker...
                           </p>
                         )}
@@ -340,7 +340,7 @@ export function Landing() {
                       position: "relative",
                       borderRadius: 20,
                       border: "1px solid var(--primary-dim)",
-                      background: "rgba(192,132,252,0.02)",
+                      background: "rgb(var(--accent-rgb) / 0.02)",
                       padding: 8,
                       backdropFilter: "blur(12px)",
                     }}
@@ -353,7 +353,7 @@ export function Landing() {
                     <div
                       style={{
                         borderRadius: 14,
-                        border: "1px solid rgba(192,132,252,0.15)",
+                        border: "1px solid rgb(var(--accent-rgb) / 0.15)",
                         background: "var(--bg-card-inner)",
                         padding: "24px",
                       }}

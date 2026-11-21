@@ -56,9 +56,7 @@ export default function LandingNav() {
             transition={{ duration: 0.5, delay: 0.15, type: "spring" }}
             style={{ display: "inline-flex" }}
           >
-            
             <img className="cygnus-logo" src="/cygnus.png" width={36} height={36} alt="" />
-
           </motion.span>
           <span
             style={{
@@ -88,7 +86,7 @@ export default function LandingNav() {
             color: "var(--text-muted)",
           }}
         >
-          {["Features", "Architecture", "Comparison", "FAQ", "GitHub"].map((item) => (
+          {["Features", "Architecture", "Comparison", "FAQ", "Footer"].map((item) => (
             <a
               key={item}
               href={`#${item.toLowerCase()}`}
@@ -116,35 +114,6 @@ export default function LandingNav() {
 
         {/* CTA Buttons (desktop) */}
         <div className="desktop-only" style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <a
-            href="/login"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              border: "none",
-              borderRadius: 6,
-              boxShadow: "0 32px 64px -16px #0006, 0 16px 32px -8px #0006, 0 8px 16px -4px #0004, 0 4px 8px -2px #0004, 0 -8px 16px -1px #0003, 0 2px 4px -1px #0004, 0 0 0 1px #000, inset 0 0 0 1px #ffffff14, inset 0 1px #fff3",
-              padding: "7px 14px",
-              fontSize: 12,
-              fontWeight: 500,
-              color: "var(--text-secondary)",
-              textDecoration: "none",
-              transition: "all 0.2s",
-              fontFamily: "var(--font-body)",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = "var(--text-primary)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = "var(--text-secondary)";
-            }}
-          >
-            Sign in
-            <svg viewBox="0 0 16 16" fill="none" style={{ width: 14, height: 14 }}>
-              <path d="M3 8h10m0 0L9 4m4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </a>
           <Link
             to="/deploy"
             style={{
@@ -153,7 +122,7 @@ export default function LandingNav() {
               gap: 6,
               border: "none",
               borderRadius: 6,
-              boxShadow: "0 32px 64px -16px #0006, 0 16px 32px -8px #0006, 0 8px 16px -4px #0004, 0 4px 8px -2px #0004, 0 -8px 16px -1px #0003, 0 2px 4px -1px #0004, 0 0 0 1px #000, inset 0 0 0 1px #e58efa14, inset 0 1px rgba(200, 153, 248, 0.94)",
+              boxShadow: "0 32px 64px -16px #0006, 0 16px 32px -8px #0006, 0 8px 16px -4px #0004, 0 4px 8px -2px #0004, 0 -8px 16px -1px #0003, 0 2px 4px -1px #0004, 0 0 0 1px #000, inset 0 0 0 1px #75e8a614, inset 0 1px rgb(var(--accent-rgb) / 0.75)",
               background: "var(--primary)",
               padding: "7px 14px",
               fontSize: 12,
@@ -164,7 +133,7 @@ export default function LandingNav() {
               fontFamily: "var(--font-body)",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = "#ac6ef4";
+              e.currentTarget.style.background = "#59cb8c";
               e.currentTarget.style.transform = "translateY(-2px)";
             }}
             onMouseLeave={(e) => {
@@ -236,7 +205,7 @@ export default function LandingNav() {
             }}
           >
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {["Features", "Architecture", "Comparison", "FAQ", "GitHub"].map((item) => (
+              {["Features", "Architecture", "Comparison", "FAQ", "Footer"].map((item) => (
                 <a
                   key={item}
                   href={`#${item.toLowerCase()}`}
@@ -256,30 +225,6 @@ export default function LandingNav() {
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 8 }}>
-              <a
-                href="/login"
-                onClick={() => setIsOpen(false)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
-                  border: "none",
-                  borderRadius: 6,
-                  boxShadow: "0 32px 64px -16px #0006, 0 16px 32px -8px #0006, 0 8px 16px -4px #0004, 0 4px 8px -2px #0004, 0 -8px 16px -1px #0003, 0 2px 4px -1px #0004, 0 0 0 1px #000, inset 0 0 0 1px #ffffff14, inset 0 1px #fff3",
-                  padding: "12px",
-                  fontSize: 13,
-                  fontWeight: 500,
-                  color: "var(--text-secondary)",
-                  textDecoration: "none",
-                  fontFamily: "var(--font-body)",
-                }}
-              >
-                Sign in
-                <svg viewBox="0 0 16 16" fill="none" style={{ width: 14, height: 14 }}>
-                  <path d="M3 8h10m0 0L9 4m4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </a>
               <Link
                 to="/deploy"
                 onClick={() => setIsOpen(false)}
@@ -290,7 +235,7 @@ export default function LandingNav() {
                   gap: 8,
                   border: "none",
                   borderRadius: 6,
-                  boxShadow: "0 32px 64px -16px #0006, 0 16px 32px -8px #0006, 0 8px 16px -4px #0004, 0 4px 8px -2px #0004, 0 -8px 16px -1px #0003, 0 2px 4px -1px #0004, 0 0 0 1px #000, inset 0 0 0 1px #e58efa14, inset 0 1px rgba(200, 153, 248, 0.94)",
+                  boxShadow: "0 32px 64px -16px #0006, 0 16px 32px -8px #0006, 0 8px 16px -4px #0004, 0 4px 8px -2px #0004, 0 -8px 16px -1px #0003, 0 2px 4px -1px #0004, 0 0 0 1px #000, inset 0 0 0 1px #75e8a614, inset 0 1px rgb(var(--accent-rgb) / 0.75)",
                   background: "var(--primary)",
                   padding: "12px",
                   fontSize: 13,

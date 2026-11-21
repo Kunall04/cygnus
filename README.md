@@ -1,179 +1,103 @@
-#                                                             Cygnus
-Cygnus is a local-first, decentralized auto-deployment platform (similar to Vercel/Netlify) featuring a high-performance React operator console, a repository uploader service, an asynchronous build worker pool, and a wildcard subdomain request router.
+# Cygnus
 
-The platform is designed to clone Git repositories, automatically execute dependencies installation and build pipelines, stream logs line-by-line in real-time to a dashboard console, and route requests dynamically to compiled static assets from object storage.
+Paste a Git URL, watch the build, open the preview. Cygnus is a self-hosted deployment platform for static frontends. The control services can run locally while each build runs in its own AWS Fargate task.
 
-
-
-
-
----
-
-## High-Level Architecture
+## How a deploy works
 
 ```mermaid
-flowchart TD
-    U[Developer] -->|Paste Git URL| FE[React Frontend]
-    FE -->|POST /deploy| US[Upload Service]
-    FE -->|GET /status & /logs| US
-    US -->|Git Clone| FS[Local Disk Storage]
-    US -->|Upload Source Files| R2[(Cloudflare R2 / S3)]
-    US -->|Push Job ID| REDIS[(Redis Queue & Status DB)]
-
-    subgraph Worker [Deploy Worker Pool]
-        DS[Deploy Worker] -->|brPop build-queue| REDIS
-        DS -->|Download Source| R2
-        DS -->|Spawn npm install & build| SHELL[Subprocess Shell]
-        SHELL -->|Real-time stdout/stderr| DS
-        DS -->|rPush logs & hSet status| REDIS
-        DS -->|Upload dist/ files| R2
-    end
-
-    subgraph Router [Request Handler]
-        RH[Request Router] -->|GET wildcard subdomain| R2
-        Client[End User] -->|Visit id.localhost| RH
-    end
+flowchart LR
+    UI["React dashboard"] --> API["uploadService"]
+    API -->|source files| S3["S3"]
+    API -->|deployment ID| SQS["SQS"]
+    SQS --> Worker["deployService"]
+    SQS -->|retry limit reached| DLQ["Dead-letter queue"]
+    Worker -->|status, logs, leases| Redis["Redis"]
+    Worker -->|launch and wait| Runner["ECS Fargate task"]
+    Runner -->|read source, write artifacts| S3
+    Runner -->|build output| Logs["CloudWatch Logs"]
+    Preview["reqHandler"] -->|read built site| S3
+    UI -->|status and logs| API
+    API -->|read progress| Redis
 ```
 
----
+- The upload API clones the repository, saves its source under `output/<id>/`, and queues the ID. A repo with a `package.json` needs an npm build script that writes to `dist/`. A plain HTML repo can be published directly.
+- The worker uses SQS long polling and renews message visibility while the build runs. A Redis lease coordinates duplicate deliveries. SQS is acknowledged after the artifacts are uploaded and the deployment is marked `deployed`. Failed deliveries can be retried, then routed to the dead-letter queue.
+- Each Fargate task gets an IAM role scoped to its deployment's S3 prefixes. The worker stores the launch token and task ARN in Redis so a later delivery can resume tracking the same task. Build output goes to CloudWatch. Redis holds the progress shown in the dashboard.
+- The preview server reads the deployment ID from the hostname and serves objects from `dist/<id>/` in S3.
 
-## What This Repo Contains
+## Run it locally
 
-- `frontend/` - React console dashboard with newsreader/mono styling, terminal log widget, and deploy workflows
-- `uploadService/` - Exposes deployment endpoints, handles cloning, S3 uploading, and queuing
-- `deployService/` - Asynchronous queue worker that spawns build environments and uploads compiled assets
-- `reqHandler/` - Wildcard subdomain proxy router streaming active websites from object storage
-- `README.md` - this guide
+Install Node.js 24, Docker, and the AWS CLI. Start Docker, then run this from the repo root to start Floci and Redis and write `.env.floci`:
 
----
-
-## Core Flow
-
-1. **Submit Repository**: Paste any public frontend GitHub repository URL in the Cygnus UI.
-2. **Clone & Source Upload**: The `uploadService` clones the repository locally, strips `.git` metadata/`node_modules`, uploads all source files to Cloudflare R2/S3 under the path `output/<id>/`, and sets status to `uploaded`.
-3. **Queue Task**: The uploader pushes the deployment ID into a Redis queue list (`build-queue`).
-4. **Log Collection**: The backend initiates log tracking, piping status steps directly to a Redis list (`logs:<id>`).
-5. **Worker Execution**: The `deployService` worker pops the ID from Redis, downloads the source files from storage, and spawns subprocesses to run:
-   - `npm install`
-   - `npm run build`
-6. **Live Streaming**: The subprocesses stdout/stderr streams are split by newlines and piped back to Redis `logs:<id>` in real-time. The frontend console polls this endpoint and auto-scrolls the active build outputs.
-7. **Production Upload**: The worker copies the local `dist/` build files, uploads them to `dist/<id>/` in object storage, and updates status to `deployed`.
-8. **Subdomain Proxying**: The user visits the sandbox link (`http://<id>.localhost:3001`). The `reqHandler` extracts the sub-domain identifier, reads the corresponding files from storage, and streams them back to the client.
-
----
-
-## Service Layout & Technology Stack
-
-| Layer | Service Folder | Technology / Packages |
-|---|---|---|
-| **Frontend Console** | `frontend/` | React 19, Vite, Motion, Axios, TailwindCSS, Sora & IBM Plex Mono Typography |
-| **API & Upload Server** | `uploadService/` | Express, Simple-Git, Redis Client, AWS-SDK |
-| **Asynchronous Worker** | `deployService/` | Node Child Processes (`spawn`), Redis Client, AWS-SDK |
-| **Request Proxy** | `reqHandler/` | Express, AWS-SDK |
-| **Datastore / Queues** | Local / Cloud | Redis (List & Hash namespaces) |
-| **Object Storage** | Local / Cloud | S3-Compatible Storage (Cloudflare R2 recommended) |
-
----
-
-## Local Setup
-
-### Prerequisites
-
-- Node.js 20+ installed
-- Redis server running locally (`redis://127.0.0.1:6379`)
-- Cloudflare R2 bucket (or AWS S3 bucket) created (e.g. named `cygnus`)
-
----
-
-### Step 1: Start Redis Queue (Docker)
-
-To run a Redis instance locally for the build queue and logs caching, run:
-
-```bash
-docker run -d --name cygnus-redis -p 6379:6379 redis:latest
+```sh
+./scripts/setup-local.sh
 ```
 
-To interact with the running Redis instance (cli mode):
+Run each line in its own terminal from the repo root:
 
-```bash
-docker exec -it cygnus-redis redis-cli
+```sh
+cd uploadService && npm ci && npm run build && node --env-file=../.env.floci dist/index.js
+cd deployService && npm ci && npm run build && node --env-file=../.env.floci dist/index.js
+cd reqHandler && npm ci && npm run build && node --env-file=../.env.floci dist/index.js
+cd frontend && npm ci && npm run dev
 ```
 
----
+Open [localhost:5173/deploy](http://localhost:5173/deploy) and submit a trusted test repo. The preview has the form `http://<id>.localhost:3001/`. Floci emulates S3 and SQS for this workflow. Builds run in the local worker process.
 
-### Step 2: Storage Environment Configuration
+For a hosted dashboard, set `VITE_UPLOAD_API_URL` and `VITE_PREVIEW_DOMAIN` before building the frontend. Use a bare domain for `VITE_PREVIEW_DOMAIN`. The backend and wildcard preview routes need to be reachable from the browser.
 
-You must create a `.env` file in the following service folders:
-- `uploadService/.env`
-- `deployService/.env`
-- `reqHandler/.env`
+## Run builds on AWS
 
-Use this structure:
+Use a private S3 bucket and a Standard SQS queue with a dead-letter queue. Set the source queue's `maxReceiveCount` to 3 for the retry behavior used in this demo. Create a root `.env` and load it from each backend directory with `node --env-file=../.env dist/index.js`.
 
-```env
-ACCESS=your_access_key_id
-SECRET=your_secret_access_key
-ENDPOINT=https://your-account-id.r2.cloudflarestorage.com
-BUCKET=cygnus
-REDIS_URL=redis://127.0.0.1:6379
+```dotenv
+AWS_PROFILE=your-aws-profile
+AWS_REGION=ap-southeast-2
+BUCKET=your-private-bucket
+REDIS_URL=redis://127.0.0.1:6387
+SQS_QUEUE_URL=https://sqs.ap-southeast-2.amazonaws.com/123456789012/your-build-queue
+BUILD_BACKEND=fargate
+ECS_CLUSTER=your-cluster
+ECS_TASK_DEFINITION=arn:aws:ecs:ap-southeast-2:123456789012:task-definition/your-runner:1
+ECS_SECURITY_GROUP=your-security-group-id
+ECS_SUBNET_ID=your-public-subnet-id
 ```
 
----
+The upload service needs S3 writes to `output/` and SQS send access. The worker needs SQS receive, delete, visibility, and queue lookup permissions, plus ECS task launch and describe access. It also needs to create, tag, manage inline policies for, pass, and remove task roles under `/cygnus-builds/`, and to pass the runner's execution role. The preview service needs S3 reads under `dist/`.
 
-### Step 3: Boot Backend Services
+For a local worker using AWS, set `BUILD_BACKEND=local`. For R2 storage, set `ENDPOINT`, `ACCESS`, and `SECRET` for the S3-compatible client. SQS still uses AWS credentials.
 
-Open three terminal sessions to run each backend component:
+### Build and publish the runner image
 
-#### 1. Start the Upload Service
-```bash
-cd uploadService
-npm install
-npm run build
-node dist/index.js
-# Runs on Port 3000
+[The CloudFormation template](deployService/fargate.yaml) sets up an ECS cluster, an ECR repository, a runner task definition, and a CloudWatch log group. Set `AWS_PROFILE` and `AWS_REGION` for your account. Provide a bucket, VPC, and an existing test deployment ID under `output/<id>/`. The template uses that ID for its standalone smoke test.
+
+```sh
+IMAGE_TAG=v1
+aws cloudformation deploy --stack-name cygnus-fargate-build \
+  --template-file deployService/fargate.yaml --capabilities CAPABILITY_IAM \
+  --parameter-overrides BucketName="$BUCKET" DeploymentId="$DEPLOYMENT_ID" VpcId="$VPC_ID" ImageTag="$IMAGE_TAG"
+
+aws cloudformation describe-stacks --stack-name cygnus-fargate-build \
+  --query 'Stacks[0].Outputs' --output table
 ```
 
-#### 2. Start the Build Worker
-```bash
+Set `REPOSITORY_URI` from the stack output and push the ARM64 build image. Use a new image tag for each image change.
+
+```sh
+aws ecr get-login-password | docker login --username AWS --password-stdin "${REPOSITORY_URI%%/*}"
+docker build --platform linux/arm64 -t "$REPOSITORY_URI:$IMAGE_TAG" deployService
+docker push "$REPOSITORY_URI:$IMAGE_TAG"
+```
+
+Copy the cluster, full task definition ARN, and security group into `.env`. Choose a public subnet in that VPC. Restart the worker and submit a repo to try the full flow. The Fargate task stops when the build finishes. The dashboard, API, worker, Redis, and preview server have to be hosted separately for a public end-to-end demo.
+
+## Test the queue flow
+
+Once Floci and Redis are up, run this from the repo root:
+
+```sh
 cd deployService
-npm install
-npm run build
-node dist/index.js
-# Pulls jobs from Redis build-queue
+SQS_TEST_ENDPOINT=http://127.0.0.1:4566 SQS_TEST_REDIS_URL=redis://127.0.0.1:6387/14 npm run test:sqs
 ```
 
-#### 3. Start the Subdomain Request Proxy
-```bash
-cd reqHandler
-npm install
-npm run build
-node dist/index.js
-# Runs on Port 3001
-```
-
----
-
-### Step 4: Run the Frontend App
-
-1. Create a `frontend/.env` file if you want to override the default upload base URL (optional):
-   ```env
-   VITE_BACKEND_UPLOAD_URL=http://localhost:3000
-   ```
-2. Launch the developer interface:
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
-3. Open `http://localhost:5173` in your browser.
-
----
-
-## Operational Details
-
-- **Redis Key Expiry**: To optimize Redis database memory overhead, deployment logs cached inside `logs:<id>` lists are configured to automatically expire 1 hour after execution ends.
-- **Port Mapping**:
-  - `http://localhost:3000` -> Upload Service Endpoint
-  - `http://localhost:3001` -> Subdomain Proxy Router
-  - `http://localhost:5173` -> Developer Console UI
-- **Wildcard Subdomains**: In production, configure Nginx to route `*.yourdomain.com` to port `3001`. For local testing, requests containing host headers like `http://<id>.localhost:3001` will serve the mapped deployment matching the ID prefix.`
+The tests cover acknowledgements, duplicate deliveries, retries, heartbeats, and dead-letter handling.
