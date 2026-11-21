@@ -7,6 +7,7 @@ import path from "path";
 import { getAllFiles } from "./file";
 import { uploadFile } from "./aws";
 import {createClient} from "redis";
+import { enqueueDeployment } from "./queue";
 
 const redURL = process.env.REDIS_URL ?? 'redis://127.0.0.1:6379';
 
@@ -62,9 +63,16 @@ app.post("/deploy",async(req,res)=>{
         })
     );
 
-    publisher.lPush("build-queue",id).catch(err=>console.error('Redis LPUSH error',err));
-    publisher.hSet("status",id,"uploaded");
-    //const val = hget
+    // Record the initial status before publishing, so a fast worker cannot be
+    // overwritten back to "uploaded" after it has started or finished.
+    await publisher.hSet("status", id, "uploaded");
+    try {
+        await enqueueDeployment(id);
+    } catch (error) {
+        console.error("Could not enqueue deployment", error);
+        await publisher.hSet("status", id, "failed");
+        return res.status(503).json({ error: "Could not enqueue deployment", id });
+    }
     console.log(repoURL);
 
 

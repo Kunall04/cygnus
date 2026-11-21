@@ -1,60 +1,105 @@
 import 'dotenv/config';
 import { createClient } from 'redis';
-import { copyFinalDist, copyStaticFiles, downloadS3Folder } from './aws';
-import { buildProject } from './utils';
-import fs from 'fs';
-import path from 'path';
+import {
+    GetQueueAttributesCommand,
+    GetQueueUrlCommand,
+    type Message,
+    ReceiveMessageCommand,
+    SQSClient,
+} from '@aws-sdk/client-sqs';
+import { buildDeployment } from './build';
+import { reconcileDeadLetter } from './dead-letter';
+import { JobStore, processMessage, VISIBILITY_SECONDS } from './job-processor';
 
-const redURL = process.env.REDIS_URL ?? 'redis://127.0.0.1:6379';
-const subscriber = createClient({ url: redURL });
-const publisher = createClient({ url: redURL });
+const queueUrl: string = process.env.SQS_QUEUE_URL ?? (() => { throw new Error('SQS_QUEUE_URL is required'); })();
+const sqs = new SQSClient({
+    region: process.env.AWS_REGION || 'us-east-1',
+    ...(process.env.SQS_ENDPOINT ? { endpoint: process.env.SQS_ENDPOINT } : {}),
+});
+const publisher = createClient({ url: process.env.REDIS_URL ?? 'redis://127.0.0.1:6379' });
+publisher.on('error', error => console.error('Redis error:', error));
 
-async function main(){
-    await subscriber.connect();
-    await publisher.connect();
-    while (true){
-        const response = await subscriber.brPop('build-queue', 0);
-        console.log(response);
-        
-        //@ts-ignore
-        const id = response.element
+// Compare the token before renewing/deleting, so an old worker cannot change a
+// lease acquired by another worker after the old lease expires.
+const store: JobStore = {
+    getStatus: id => publisher.hGet('status', id),
+    setStatus: async (id, status) => { await publisher.hSet('status', id, status); },
+    addLog: async (id, message) => { await publisher.rPush(`logs:${id}`, message); },
+    expireLogs: async id => { await publisher.expire(`logs:${id}`, 3600); },
+    acquireLease: async (id, token, seconds) =>
+        (await publisher.set(`deployment-lock:${id}`, token, { NX: true, EX: seconds })) === 'OK',
+    renewLease: async (id, token, seconds) => (await publisher.eval(
+        "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('expire', KEYS[1], ARGV[2]) else return 0 end",
+        { keys: [`deployment-lock:${id}`], arguments: [token, String(seconds)] },
+    )) === 1,
+    releaseLease: async (id, token) => {
+        await publisher.eval(
+            "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end",
+            { keys: [`deployment-lock:${id}`], arguments: [token] },
+        );
+    },
+};
 
-        try {
-            await publisher.rPush(`logs:${id}`, "✦ Downloading source code from storage...");
-            await downloadS3Folder(`output/${id}`);
-            await publisher.rPush(`logs:${id}`, "✦ Source code downloaded.");
-            
-            const projectDir = path.join(__dirname, `output/${id}`);
-            const hasPackageJson = fs.existsSync(path.join(projectDir, "package.json"));
-
-            if (hasPackageJson) {
-                await publisher.rPush(`logs:${id}`, "✦ Starting build pipeline (npm install & build)...");
-                await buildProject(id, async (log) => {
-                    await publisher.rPush(`logs:${id}`, log);
-                });
-                await publisher.rPush(`logs:${id}`, "✦ Build completed successfully.");
-                
-                await publisher.rPush(`logs:${id}`, "✦ Copying build artifacts to production storage...");
-                await copyFinalDist(id);
-            } else {
-                await publisher.rPush(`logs:${id}`, "✦ No package.json found. Deploying as a static site...");
-                await publisher.rPush(`logs:${id}`, "✦ Copying static files to production storage...");
-                await copyStaticFiles(id);
-            }
-            
-            await publisher.rPush(`logs:${id}`, "✦ Artifacts uploaded. Deployment live!");
-            
-            await publisher.hSet("status", id, "deployed");
-        } catch (error: any) {
-            console.error(`Build failed for id: ${id}`, error);
-            await publisher.rPush(`logs:${id}`, `✖ Deployment failed: ${error.message || error}`);
-            await publisher.hSet("status", id, "failed");
-        } finally {
-            // Set 1 hour expiration for the log list to save memory
-            await publisher.expire(`logs:${id}`, 3600);
-        }
-    }
-    
+async function runBuild(id: string): Promise<void> {
+    const log = (message: string) => store.addLog(id, message);
+    await buildDeployment(id, log);
 }
 
-main().catch(console.error);
+async function pollQueue(
+    url: string,
+    label: string,
+    visibilityTimeout: number,
+    handleMessage: (message: Message) => Promise<void>,
+): Promise<void> {
+    while (true) {
+        try {
+            const response = await sqs.send(new ReceiveMessageCommand({
+                QueueUrl: url,
+                MaxNumberOfMessages: 1,
+                WaitTimeSeconds: 20,
+                VisibilityTimeout: visibilityTimeout,
+                MessageSystemAttributeNames: ['ApproximateReceiveCount'],
+            }));
+            const message = response.Messages?.[0];
+            if (message) await handleMessage(message);
+        } catch (error) {
+            console.error(`SQS ${label} worker error; retrying in 5 seconds`, error);
+            await new Promise(resolve => setTimeout(resolve, 5000));
+        }
+    }
+}
+
+async function main(): Promise<void> {
+    await publisher.connect();
+    // Discover both the retry limit and the target queue from the same policy.
+    const attributes = await sqs.send(new GetQueueAttributesCommand({
+        QueueUrl: queueUrl,
+        AttributeNames: ['RedrivePolicy'],
+    }));
+    const rawPolicy = attributes.Attributes?.RedrivePolicy;
+    const policy = rawPolicy ? JSON.parse(rawPolicy) : {};
+    const maxReceives = Number(policy.maxReceiveCount);
+    const [, , service, , account, name] = String(policy.deadLetterTargetArn ?? '').split(':');
+    if (!Number.isInteger(maxReceives) || maxReceives < 1 || service !== 'sqs' || !account || !name) {
+        throw new Error('Configure an SQS dead-letter queue and redrive policy before starting the worker');
+    }
+    const { QueueUrl: deadLetterUrl } = await sqs.send(new GetQueueUrlCommand({
+        QueueName: name,
+        QueueOwnerAWSAccountId: account,
+    }));
+    if (!deadLetterUrl) throw new Error('Could not resolve the dead-letter queue URL');
+
+    console.log(`Worker listening on the SQS build and dead-letter queues (max receives: ${maxReceives})`);
+    await Promise.all([
+        pollQueue(queueUrl, 'build', VISIBILITY_SECONDS,
+            message => processMessage(message, { sqs, queueUrl, maxReceives, store, runBuild })),
+        pollQueue(deadLetterUrl, 'dead-letter', 30,
+            message => reconcileDeadLetter(message, deadLetterUrl, sqs, publisher)),
+    ]);
+}
+
+main().catch(async error => {
+    console.error('Worker startup failed:', error);
+    if (publisher.isOpen) await publisher.quit().catch(console.error);
+    process.exitCode = 1;
+});

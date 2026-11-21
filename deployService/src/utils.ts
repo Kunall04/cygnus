@@ -1,6 +1,11 @@
 import { spawn } from "child_process";
 import path from "path";
 
+// The uploader generates five lowercase letters or digits from 1 to 9.
+export function isDeploymentId(value: string | undefined): value is string {
+    return value !== undefined && /^[a-z1-9]{5}$/.test(value);
+}
+
 export function buildProject(id: string, onLog: (log: string) => void) {
     const projectDir = path.join(__dirname, `output/${id}`);
 
