@@ -1,4 +1,5 @@
 .env
+.env.floci
 **/node_modules
 **/dist
 **/output
