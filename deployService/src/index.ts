@@ -9,9 +9,14 @@ import {
 } from '@aws-sdk/client-sqs';
 import { buildDeployment } from './build';
 import { reconcileDeadLetter } from './dead-letter';
+import { buildOnFargate } from './fargate-build';
 import { JobStore, processMessage, VISIBILITY_SECONDS } from './job-processor';
 
 const queueUrl: string = process.env.SQS_QUEUE_URL ?? (() => { throw new Error('SQS_QUEUE_URL is required'); })();
+const buildBackend = process.env.BUILD_BACKEND ?? 'local';
+if (buildBackend !== 'local' && buildBackend !== 'fargate') {
+    throw new Error('BUILD_BACKEND must be local or fargate');
+}
 const sqs = new SQSClient({
     region: process.env.AWS_REGION || 'us-east-1',
     ...(process.env.SQS_ENDPOINT ? { endpoint: process.env.SQS_ENDPOINT } : {}),
@@ -42,6 +47,10 @@ const store: JobStore = {
 
 async function runBuild(id: string): Promise<void> {
     const log = (message: string) => store.addLog(id, message);
+    if (buildBackend === 'fargate') {
+        await buildOnFargate(id, publisher, log);
+        return;
+    }
     await buildDeployment(id, log);
 }
 
