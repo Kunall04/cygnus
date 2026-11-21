@@ -109,7 +109,7 @@ export default function LandingFeatures() {
         </svg>
       ),
       title: "Unique Subdomain per Deploy",
-      desc: "Every deployment gets a dedicated subdomain under localhost, enabling multiple live versions simultaneously.",
+      desc: "Each deployment gets a unique preview URL, so you can open separate versions of a site.",
       delay: 0.12,
     },
     {
@@ -120,7 +120,7 @@ export default function LandingFeatures() {
           <path d="M2 17l10 5 10-5" />
         </svg>
       ),
-      title: "Redis Queue Processing",
+      title: "SQS Build Queue",
       desc: "Deployments are enqueued asynchronously via Redis, decoupling the deploy service from the build worker.",
       delay: 0.18,
     },
@@ -132,8 +132,8 @@ export default function LandingFeatures() {
           <line x1="10" y1="6" x2="10" y2="18" strokeDasharray="2 2" />
         </svg>
       ),
-      title: "Cloudflare R2 Storage",
-      desc: "Source files and build artifacts stored in Cloudflare R2, providing globally distributed, cost-efficient object storage.",
+      title: "Amazon S3 Storage",
+      desc: "Source files and build artifacts live in separate prefixes in a private S3 bucket.",
       delay: 0.24,
     },
     {
@@ -154,8 +154,8 @@ export default function LandingFeatures() {
           <path d="M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2" />
         </svg>
       ),
-      title: "Nginx + PM2 Infrastructure",
-      desc: "Production-grade process management with PM2 and reverse proxy routing through Nginx on AWS EC2.",
+      title: "ECS Fargate Builds",
+      desc: "Each cloud build runs in its own Fargate task with access to that deployment’s files.",
       delay: 0.36,
     },
     // {

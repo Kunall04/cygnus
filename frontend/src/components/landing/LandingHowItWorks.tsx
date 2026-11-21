@@ -113,8 +113,8 @@ export function PipelineSteps({
 }) {
   const steps = [
     { num: "01", title: "Paste URL", desc: "Drop your GitHub repository URL into the deploy form.", icon: "⬡" },
-    { num: "02", title: "Clone & Upload", desc: "Cygnus clones the repo and uploads source files to Cloudflare R2 storage.", icon: "◈" },
-    { num: "03", title: "Queue Build", desc: "A build job is enqueued in Redis for async processing by the worker pool.", icon: "⟳" },
+    { num: "02", title: "Clone & Upload", desc: "Cygnus clones the repo and uploads source files to Amazon S3 storage.", icon: "◈" },
+    { num: "03", title: "Queue Build", desc: "The deployment ID goes to SQS. Redis tracks status and logs.", icon: "⟳" },
     { num: "04", title: "Build & Ship", desc: "Workers run npm install + build, then upload artifacts. Your site goes live.", icon: "▣" },
   ];
 
@@ -488,7 +488,7 @@ export function ArchitectureDiagram({
         <FlowLine id="uploader-to-redis" path="M 750 100 H 870 V 205 H 930" label="Push Job ID" labelX={810} labelY={85} />
         <FlowLine id="uploader-to-r2" path="M 750 100 H 885 V 365 H 930" label="Upload Source" labelX={835} labelY={280} />
         
-        <FlowLine id="worker-to-redis" path="M 755 365 H 860 V 220 H 930" label="brPop queue" labelX={820} labelY={350} reverse={true} />
+        <FlowLine id="worker-to-redis" path="M 755 365 H 860 V 220 H 930" label="Receive SQS job" labelX={820} labelY={350} reverse={true} />
         <FlowLine id="worker-to-r2" path="M 755 385 H 930" label="Download Source / Upload dist" labelX={842} labelY={373} />
         <FlowLine id="worker-to-shell" path="M 625 410 V 505" label="Spawn Build" labelX={580} labelY={457} />
         <FlowLine id="shell-to-worker" path="M 705 505 V 410" label="Live logs" labelX={750} labelY={457} reverse={true} />
@@ -502,8 +502,8 @@ export function ArchitectureDiagram({
         <Node id="uploader" x={580} y={70} width={170} height={60} title="Upload Service" subtext="Express API Uploader" icon={Icons.Uploader} stepId="02" />
         <Node id="local-disk" x={580} y={200} width={170} height={50} title="Local Disk" subtext="Cloning Workspace" icon={Icons.LocalDisk} stepId="02" />
 
-        <Node id="redis" x={930} y={170} width={180} height={70} title="Redis Queue & DB" subtext="List Queues & Logs Hash" icon={Icons.Redis} stepId="03" />
-        <Node id="r2" x={930} y={330} width={180} height={70} title="Cloudflare R2" subtext="S3 Object Storage" icon={Icons.R2} stepId="02" />
+        <Node id="redis" x={930} y={170} width={180} height={70} title="SQS + Redis" subtext="Build jobs and deployment state" icon={Icons.Redis} stepId="03" />
+        <Node id="r2" x={930} y={330} width={180} height={70} title="Amazon S3" subtext="S3 Object Storage" icon={Icons.R2} stepId="02" />
 
         {/* Worker Pool Inner Nodes */}
         <Node id="worker" x={575} y={345} width={180} height={65} title="Deploy Worker" subtext="Queue Consumer" icon={Icons.Worker} stepId="04" />
@@ -529,19 +529,19 @@ export function MobileFlowDiagram() {
     {
       step: "02",
       title: "Express Upload Service",
-      desc: "Clones the repo locally on Disk, strips metadata, and uploads source files to Cloudflare R2 Object Storage.",
-      nodes: ["Upload Service", "Local Disk Storage", "Cloudflare R2"],
+      desc: "Clones the repo locally on Disk, strips metadata, and uploads source files to Amazon S3 Object Storage.",
+      nodes: ["Upload Service", "Local Disk Storage", "Amazon S3"],
     },
     {
       step: "03",
       title: "Redis Build Queue",
-      desc: "Pushes job ID metadata into Redis queue and logs DB for real-time tracking.",
-      nodes: ["Redis Queue & DB"],
+      desc: "Sends the deployment ID to SQS and records progress in Redis.",
+      nodes: ["SQS + Redis"],
     },
     {
       step: "04",
       title: "Deploy Worker Pool & Router",
-      desc: "Workers fetch from Redis & R2, run builds via subprocess shell, push live logs to Redis, and save dist files. Request Router serves files from R2.",
+      desc: "The worker receives the job from SQS and can launch Fargate. The runner writes the built site to S3.",
       nodes: ["Deploy Worker", "Subprocess Shell", "Request Router"],
     },
   ];

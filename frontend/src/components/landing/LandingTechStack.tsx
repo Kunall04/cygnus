@@ -5,12 +5,12 @@ import { FadeUp, SectionLabel } from "./LandingHelpers";
 export function Ticker() {
   const items = [
     "GitHub Deployments",
-    "Redis Queue",
-    "Cloudflare R2",
+    "Amazon SQS",
+    "Amazon S3",
     "AWS EC2",
     "Wildcard Subdomains",
     "PM2 Process",
-    "Nginx Reverse Proxy",
+    "ECS Fargate",
     "Build Automation",
     "Async Workers",
     "TypeScript",
@@ -93,8 +93,8 @@ export default function LandingTechStack() {
           { name: "Node.js", role: "Backend services" },
           { name: "Redis", role: "Job queue" },
           { name: "AWS EC2", role: "Compute" },
-          { name: "Nginx", role: "Reverse proxy" },
-          { name: "Cloudflare R2", role: "Object storage" },
+          { name: "ECS Fargate", role: "Cloud builds" },
+          { name: "Amazon S3", role: "Object storage" },
           { name: "PM2", role: "Process manager" },
         ].map((tech, i) => (
           <FadeUp key={tech.name} delay={i * 0.05}>

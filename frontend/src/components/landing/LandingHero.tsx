@@ -6,15 +6,15 @@ import { useReveal, CornerBracket } from "./LandingHelpers";
 // ─── Terminal mock ────────────────────────────────────────────────────────────
 export function Terminal() {
   const lines = [
-    { text: "$ cygnus deploy --repo github.com/user/app", color: "var(--text-muted)" },
+    { text: "Deploy github.com/user/app", color: "var(--text-muted)" },
     { text: "  ✦ Cloning repository...", color: "var(--primary)" },
-    { text: "  ✦ Uploading to Cloudflare R2...", color: "var(--primary)" },
+    { text: "  ✦ Uploading to S3...", color: "var(--primary)" },
     { text: "  ✦ Queuing build job [id: a7f3c9]", color: "#a78bfa" },
     { text: "  ✦ Worker picked up job", color: "#a78bfa" },
     { text: "  ✦ Running npm install... done", color: "#22d3ee" },
     { text: "  ✦ Running npm run build... done", color: "#22d3ee" },
-    { text: "  ✓ Deployed to a7f3c9.localhost", color: "var(--green)" },
-    { text: "  ↗ https://a7f3c9.localhost", color: "var(--green)" },
+    { text: "  ✓ Deployed to a7f3c.localhost:3001", color: "var(--green)" },
+    { text: "  ↗ http://a7f3c.localhost:3001", color: "var(--green)" },
   ];
 
   const [visibleLines, setVisibleLines] = useState<typeof lines>([]);

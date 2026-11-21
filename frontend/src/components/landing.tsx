@@ -6,7 +6,8 @@ import "./landing/landingmain.css";
 import LandingNav from "./landing/LandingNav";
 import { RailLine, RailContainer, FadeUp, SectionLabel, CornerBracket } from "./landing/LandingHelpers";
 
-const BACKEND_UPLOAD_URL = "http://localhost:3000";
+const BACKEND_UPLOAD_URL = import.meta.env.VITE_UPLOAD_API_URL || "http://localhost:3000";
+const PREVIEW_DOMAIN = import.meta.env.VITE_PREVIEW_DOMAIN;
 
 export function Landing() {
   const [repoUrl, setRepoUrl] = useState("");
@@ -17,6 +18,16 @@ export function Landing() {
   const [status, setStatus] = useState<string>("");
   const intervalRef = useRef<any>(null);
   const logsEndRef = useRef<HTMLDivElement>(null);
+  const previewUrl = PREVIEW_DOMAIN
+    ? `https://${uploadId}.${PREVIEW_DOMAIN}/`
+    : `http://${uploadId}.localhost:3001/`;
+  const pendingLabel = !uploadId
+    ? "Uploading code..."
+    : status === "retrying"
+      ? "Waiting to retry..."
+      : status === "building"
+        ? "Building..."
+        : "Waiting for a worker...";
 
   useEffect(() => {
     document.body.classList.add("landing-main-active");
@@ -197,7 +208,7 @@ export function Landing() {
                       }}
                     >
                       {uploading
-                        ? "Uploading code..."
+                        ? pendingLabel
                         : uploadId && status === "failed"
                           ? "Deployment Failed (Try Again)"
                           : uploadId && !deployed
@@ -262,11 +273,11 @@ export function Landing() {
                       {/* Terminal lines */}
                       <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 8, maxHeight: "280px", overflowY: "auto" }}>
                         <p style={{ fontFamily: "var(--font-mono)", fontSize: "clamp(10px, 2.5vw, 12px)", color: "var(--text-secondary)", wordBreak: "break-all" }}>
-                          $ cygnus deploy --repo {repoUrl}
+                          Deploying {repoUrl}
                         </p>
-                        {uploading && (
+                        {uploading && !uploadId && (
                           <p style={{ fontFamily: "var(--font-mono)", fontSize: "clamp(10px, 2.5vw, 12px)", color: "var(--primary-dim)" }}>
-                            ✦ Cloned repository & uploading source files...
+                            ✦ Cloning repository and uploading source files...
                           </p>
                         )}
                         {uploadId && (
@@ -293,16 +304,16 @@ export function Landing() {
 
                         {uploadId && !deployed && status !== "failed" && logs.length === 0 && (
                           <p style={{ fontFamily: "var(--font-mono)", fontSize: "clamp(10px, 2.5vw, 12px)", color: "#a78bfa" }}>
-                            ✦ Enqueued in Redis. Waiting for worker build...
+                            ✦ Queued in SQS. Waiting for a build worker...
                           </p>
                         )}
                         {deployed && (
                           <>
                             <p style={{ fontFamily: "var(--font-mono)", fontSize: "clamp(10px, 2.5vw, 12px)", color: "var(--green)" }}>
-                              ✓ Build finished. Deployed successfully to production!
+                              ✓ Build finished. Your preview is ready.
                             </p>
                             <p style={{ fontFamily: "var(--font-mono)", fontSize: "clamp(10px, 2.5vw, 12px)", color: "var(--green)" }}>
-                              ↗ URL: http://{uploadId}.localhost/
+                              ↗ URL: {previewUrl}
                             </p>
                           </>
                         )}
@@ -359,7 +370,7 @@ export function Landing() {
                         Deployment Success
                       </h2>
                       <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 20 }}>
-                        Your website has been deployed successfully to the cloud.
+                        Your website is ready to preview.
                       </p>
 
                       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -376,7 +387,7 @@ export function Landing() {
                           <input
                             readOnly
                             type="url"
-                            value={`http://${uploadId}.localhost/`}
+                            value={previewUrl}
                             onClick={(e) => e.currentTarget.select()}
                             style={{
                               background: "rgba(0, 0, 0, 0.4)",
@@ -396,7 +407,7 @@ export function Landing() {
                         </div>
 
                         <motion.a
-                          href={`http://${uploadId}.localhost/`}
+                          href={previewUrl}
                           target="_blank"
                           rel="noopener noreferrer"
                           whileHover={{ scale: 1.02 }}
@@ -416,7 +427,7 @@ export function Landing() {
                             transition: "background 0.2s",
                           }}
                         >
-                          Visit Production Website →
+                          Open deployment preview →
                         </motion.a>
                       </div>
                     </div>

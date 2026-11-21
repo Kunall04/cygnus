@@ -73,7 +73,7 @@ export function ComparisonTable() {
     { feature: "Automated build pipeline", cygnus: true, manual: false, others: true },
     { feature: "Unique subdomain per deploy", cygnus: true, manual: false, others: true },
     { feature: "Queue-based async processing", cygnus: true, manual: false, others: "partial" },
-    { feature: "Cloudflare R2 artifact storage", cygnus: true, manual: false, others: false },
+    { feature: "S3 artifact storage", cygnus: true, manual: false, others: false },
     { feature: "Horizontally scalable workers", cygnus: true, manual: false, others: "partial" },
     { feature: "Custom domain ready", cygnus: true, manual: true, others: true },
   ];
@@ -215,7 +215,7 @@ export default function LandingComparison() {
         <ComparisonCard
           versus="Manual VPS"
           criticism="Full control, but setting up Nginx, PM2, DNS, and CI/CD from scratch takes hours per project."
-          cygnus="Paste URL, click deploy, get a live subdomain in under 60 seconds."
+          cygnus="Paste a Git URL, follow the build, and open the deployment preview."
           delay={0}
         />
         <ComparisonCard
@@ -227,7 +227,7 @@ export default function LandingComparison() {
         <ComparisonCard
           versus="Docker + K8s"
           criticism="Powerful for microservices, but overkill for shipping a static React build."
-          cygnus="Purpose-built for frontend deploys. No Dockerfiles, no YAML, no cluster management."
+          cygnus="Submit a static frontend that builds with npm or serves plain HTML."
           delay={0.16}
         />
       </div>

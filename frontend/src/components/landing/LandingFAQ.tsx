@@ -5,23 +5,23 @@ import { FadeUp, SectionLabel } from "./LandingHelpers";
 const faqs = [
   {
     q: "What frontend frameworks does Cygnus support?",
-    a: "Cygnus supports any framework with a standard npm build script — React, Vue, Svelte, Next.js (static export), Vite, and plain HTML. As long as npm run build produces a dist or build folder, Cygnus handles it.",
+    a: "Cygnus serves plain HTML and static frontends whose npm build script writes to dist/.",
   },
   {
     q: "How does the wildcard subdomain routing work?",
-    a: "Nginx on the request handler is configured with a wildcard server_name (*.localhost). When a request arrives, it reads the subdomain prefix as the deployment ID and fetches the corresponding build artifacts from Cloudflare R2.",
+    a: "The preview server reads the deployment ID from the hostname and serves the corresponding files from S3.",
   },
   {
     q: "Can I scale the build workers horizontally?",
-    a: "Yes — the architecture is designed for horizontal scaling. Multiple worker instances can consume from the same Redis queue simultaneously, processing independent deployment jobs in parallel without contention.",
+    a: "Workers consume jobs from SQS. A Redis lease coordinates workers that receive the same deployment ID.",
   },
   {
     q: "Where are build artifacts stored?",
-    a: "All build artifacts are uploaded to Cloudflare R2 object storage. The request handler fetches files directly from R2 on each request, serving HTML, CSS, JS, and static assets through Nginx.",
+    a: "The runner uploads build artifacts to S3. The preview server reads them from S3 when visitors open a deployment URL.",
   },
   {
-    q: "Is Cygnus open source?",
-    a: "Cygnus is a learning project built to deeply understand distributed systems, cloud infrastructure, and deployment pipelines. The codebase is on GitHub and serves as a portfolio artifact targeting SDE roles.",
+    q: "What is Cygnus for?",
+    a: "Cygnus is a portfolio project for exploring build queues, containerized builds, and cloud storage.",
   },
 ];
 

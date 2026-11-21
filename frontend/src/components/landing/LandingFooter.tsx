@@ -21,7 +21,7 @@ export default function LandingFooter() {
       </div>
       <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
         {[
-          { label: "Architecture", href: "#architecture" },
+          { label: "Architecture", href: "#architecture" }
         ].map((item) => (
           <a
             key={item.label}
