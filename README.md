@@ -15,6 +15,7 @@ flowchart LR
     Worker -->|launch and wait| Runner["ECS Fargate task"]
     Runner -->|read source, write artifacts| S3
     Runner -->|build output| Logs["CloudWatch Logs"]
+    Logs -->|runner output| Worker
     Preview["reqHandler"] -->|read built site| S3
     UI -->|status and logs| API
     API -->|read progress| Redis
@@ -22,7 +23,7 @@ flowchart LR
 
 - The upload API clones the repository, saves its source under `output/<id>/`, and queues the ID. A repo with a `package.json` needs an npm build script that writes to `dist/`. A plain HTML repo can be published directly.
 - The worker uses SQS long polling and renews message visibility while the build runs. A Redis lease coordinates duplicate deliveries. SQS is acknowledged after the artifacts are uploaded and the deployment is marked `deployed`. Failed deliveries can be retried, then routed to the dead-letter queue.
-- Each Fargate task gets an IAM role scoped to its deployment's S3 prefixes. The worker stores the launch token and task ARN in Redis so a later delivery can resume tracking the same task. Build output goes to CloudWatch. Redis holds the progress shown in the dashboard.
+- Each Fargate task gets an IAM role scoped to its deployment's S3 prefixes. The worker stores the launch token and task ARN in Redis so a later delivery can resume tracking the same task. Build output goes to CloudWatch. With `ECS_LOG_GROUP` set, the worker reads the task's CloudWatch stream and appends npm output to the dashboard's Redis log feed.
 - The preview server reads the deployment ID from the hostname and serves objects from `dist/<id>/` in S3.
 
 ## Run it locally
@@ -61,9 +62,12 @@ ECS_CLUSTER=your-cluster
 ECS_TASK_DEFINITION=arn:aws:ecs:ap-southeast-2:123456789012:task-definition/your-runner:1
 ECS_SECURITY_GROUP=your-security-group-id
 ECS_SUBNET_ID=your-public-subnet-id
+ECS_LOG_GROUP=your-cloudformation-LogGroup-output
 ```
 
 The upload service needs S3 writes to `output/` and SQS send access. The worker needs SQS receive, delete, visibility, and queue lookup permissions, plus ECS task launch and describe access. It also needs to create, tag, manage inline policies for, pass, and remove task roles under `/cygnus-builds/`, and to pass the runner's execution role. The preview service needs S3 reads under `dist/`.
+
+For dashboard build output, give the worker's AWS identity `logs:GetLogEvents` on `arn:aws:logs:<region>:<account-id>:log-group:<log-group-name>:log-stream:build/runner/*`. Set `ECS_LOG_GROUP` to the stack's `LogGroup` output. This enables log forwarding for the task definition in this repo, which uses the `build` stream prefix and the `runner` container. The worker keeps reading briefly after the task stops to pick up late log lines.
 
 For a local worker using AWS, set `BUILD_BACKEND=local`. For R2 storage, set `ENDPOINT`, `ACCESS`, and `SECRET` for the S3-compatible client. SQS still uses AWS credentials.
 

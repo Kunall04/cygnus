@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { createClient } from 'redis';
+import { forwardFargateLogs } from './cloudwatch-logs';
 import { FargateBuildFailedError, startFargateBuild, waitForFargateBuild } from './fargate';
 import { prepareBuildRole, removeBuildRole } from './fargate-role';
 
@@ -38,7 +39,21 @@ export async function buildOnFargate(
     await log(`✦ Fargate task ${previousTask ? 'resumed' : 'started'}: ${taskArn.split('/').at(-1)}`);
 
     try {
-        await waitForFargateBuild(taskArn);
+        const logGroup = process.env.ECS_LOG_GROUP;
+        const buildFinished = new AbortController();
+        const forwarding = logGroup
+            ? forwardFargateLogs(id, taskArn, logGroup, redis, buildFinished.signal).catch(async error => {
+                console.warn(`Could not read CloudWatch logs for ${taskArn}`, error);
+                await log('✦ Build output is unavailable in the dashboard. Check the task in CloudWatch Logs.')
+                    .catch(logError => console.warn('Could not write CloudWatch warning to Redis', logError));
+            })
+            : undefined;
+        try {
+            await waitForFargateBuild(taskArn);
+        } finally {
+            buildFinished.abort();
+            await forwarding;
+        }
     } catch (error) {
         // A confirmed failed task can be replaced. An uncertain result must resume the same task.
         if (error instanceof FargateBuildFailedError) {
